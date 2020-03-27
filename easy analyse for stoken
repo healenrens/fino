@@ -1,0 +1,104 @@
+import tushare as ts
+pro=ts.pro_api('your token')
+
+import pandas as pd
+import numpy as np
+tscode=[]
+detal1,detal2=0,0
+def inputcode(number):
+    print("please input the number of stock code\n")
+
+    i = 0
+    while i<number:
+        a=input()
+        tscode.append(a)
+        i=i+1
+        a=0
+        print("\n")
+    return tscode
+def typechange(date):
+    a=np.array(date)
+    b=a.tolist()
+    return b
+def income_find(code_find,enddate):#营业利润，利润总额，平均每股收益
+    date1 = pro.income(ts_code='code_find', start_date='20160101', end_date='enddate', fields='operate_profit,total_profit,basic_eps,update_flag')
+    incomedate=date1.iloc[0:1,:]
+    incomedate=typechange(incomedate)
+
+def ttdebt(code_find,enddate):#资产总计，负债及股东权益总计，总股本
+    date2=pro.balancesheet(ts_code='code_find', start_date='20160101', end_date='enddate', fields='total_assets,total_liab_hldr_eqy,total_share')
+    balancesheetdate=date2.iloc[0:2,:]
+    balancesheetdate=typechange(balancesheetdate)
+    return balancesheetdate
+
+def precast(code_find):
+    pro.forecast(ts_code='code_find', fields='ts_code,ann_date,end_date,type,net_profit_max,net_profit_min,change_reason')
+    date3 = pro.forecast(ts_code='code_find', fields='ts_code,ann_date,end_date,type,net_profit_max,net_profit_min,change_reason')
+    predate1=date3.iloc[0:2,4:6]#预期利润
+    predate1=typechange(predate1)
+    return predate1
+
+def checkforecasr(code_find):#预期利润检查
+    date4=pro.forecast(ts_code='code_find', fields='ts_code,ann_date,end_date,type,net_profit_max,net_profit_min,change_reason')
+    date41=typechange(date4.iloc[0:1,:])
+    date42=typechange(date4.iloc[1:2,:])
+    if date41[2:3] == date4[2:3]:
+        if date41[4:5] != date42[4:5]:
+            print('warning!!!',date4.iloc[0:1,6:7])
+
+def checkdate(code_find, datenow):#数据检查
+    date5= pro.forecast(ts_code='code_find', fields='ts_code,ann_date,end_date,type,net_profit_max,net_profit_min,change_reason')
+    datecheck=typechange(date5.iloc[0:1,2:3])
+    a=int(datecheck[0:1])
+    if datenow-a>10001:
+        pro.forecast(ts_code='code_find', fields='ts_code,ann_date,end_date,type,net_profit_max,net_profit_min,change_reason')
+        print('maybe some wrong')
+        datecheck(code_find,datenow)
+
+def dateccf(a,b,c,d,e,f):#总资产 股东权益及总负债 总利润 总股本 预期利润ai
+    d1=int(a)
+    d2=int(b)
+    d3=int(c)
+    d4=int(d)
+    d5=int(e)
+    d6=int(f)
+    foreturemax=d1+d5+d3
+    foreturemin=d1+d6+d3
+    detal1=foreturemax-d2-d4
+    detal2=foreturemin-d2-d4
+    return detal1,detal2
+
+#code on##########################################################################################
+
+print('请输入查询数量\n')
+nump=int(input())
+inputcode(nump)
+print("请以yyyymmdd输入日期\n")
+dddday=input()
+import tushare as ts
+import pandas
+import numpy
+pro=ts.pro_api('your token')
+
+#fino1#########################################################################################
+p=0
+while p<nump:
+    codnu=tscode[p:p+1]
+    incomedate=income_find(codnu, dddday)
+    balancesheetdate=ttdebt(codnu, dddday)
+    dday=int(dddday)
+    checkdate(codnu, dday)
+    predate1=precast(codnu)
+    checkforecasr(codnu)
+    dateccf(balancesheetdate[0:1],balancesheetdate[1:2],incomedate[1:2], balancesheetdate[2:3],predate1[4:5],predate1[5:6] )
+    if detal2<0:
+        if detal1 > 0:
+            print("not bad")
+        else:
+            print("st,建议查看近期财报")
+    else:
+        print("maybe good")
+        det1=(incomedate[0:1,1:2]-incomedate[0:1,0:1])/incomedate[0:1,1:2]
+    if det1>0.1:
+        print("盈利构成存在问题\n")
+        print(det1)
